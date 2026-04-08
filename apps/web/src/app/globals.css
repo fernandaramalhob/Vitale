@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand - Rose/Pink premium */
+  --brand-50:  340 100% 97%;
+  --brand-100: 340 100% 94%;
+  --brand-200: 340 90% 86%;
+  --brand-300: 340 80% 74%;
+  --brand-400: 340 75% 62%;
+  --brand-500: 340 70% 52%;
+  --brand-600: 340 70% 42%;
+  --brand-700: 340 65% 32%;
+  --brand-800: 340 60% 22%;
+  --brand-900: 340 55% 14%;
+
+  /* Surfaces - dark theme */
+  --surface:         224 20% 8%;
+  --surface-raised:  224 18% 11%;
+  --surface-overlay: 224 16% 14%;
+  --surface-sunken:  224 22% 6%;
+
+  /* Borders */
+  --border:        224 15% 18%;
+  --border-subtle: 224 15% 14%;
+  --border-strong: 224 15% 24%;
+
+  /* Text */
+  --text-primary:   0 0% 96%;
+  --text-secondary: 0 0% 70%;
+  --text-tertiary:  0 0% 45%;
+  --text-inverse:   0 0% 8%;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: hsl(var(--surface));
+  color: hsl(var(--text-primary));
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+::selection {
+  background: hsl(var(--brand-500) / 0.3);
+  color: hsl(var(--text-primary));
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border-strong));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--border-strong) / 0.8);
+}
