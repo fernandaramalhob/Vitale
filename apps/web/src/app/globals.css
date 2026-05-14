@@ -3,34 +3,30 @@
 @tailwind utilities;
 
 :root {
-  /* Brand - Rose/Pink premium */
-  --brand-50:  340 100% 97%;
-  --brand-100: 340 100% 94%;
-  --brand-200: 340 90% 86%;
-  --brand-300: 340 80% 74%;
-  --brand-400: 340 75% 62%;
-  --brand-500: 340 70% 52%;
-  --brand-600: 340 70% 42%;
-  --brand-700: 340 65% 32%;
-  --brand-800: 340 60% 22%;
-  --brand-900: 340 55% 14%;
+  --brand-50: 138 60% 96%;
+  --brand-100: 138 52% 90%;
+  --brand-200: 138 45% 82%;
+  --brand-300: 138 44% 72%;
+  --brand-400: 138 42% 60%;
+  --brand-500: 138 55% 38%;
+  --brand-600: 138 58% 33%;
+  --brand-700: 138 60% 28%;
+  --brand-800: 138 62% 22%;
+  --brand-900: 138 64% 16%;
 
-  /* Surfaces - dark theme */
-  --surface:         224 20% 8%;
-  --surface-raised:  224 18% 11%;
-  --surface-overlay: 224 16% 14%;
-  --surface-sunken:  224 22% 6%;
+  --surface: 0 0% 98%;
+  --surface-raised: 0 0% 100%;
+  --surface-overlay: 0 0% 100%;
+  --surface-sunken: 120 8% 95%;
 
-  /* Borders */
-  --border:        224 15% 18%;
-  --border-subtle: 224 15% 14%;
-  --border-strong: 224 15% 24%;
+  --border: 140 14% 88%;
+  --border-subtle: 140 14% 92%;
+  --border-strong: 140 16% 80%;
 
-  /* Text */
-  --text-primary:   0 0% 96%;
-  --text-secondary: 0 0% 70%;
-  --text-tertiary:  0 0% 45%;
-  --text-inverse:   0 0% 8%;
+  --text-primary: 145 35% 10%;
+  --text-secondary: 145 16% 40%;
+  --text-tertiary: 145 10% 58%;
+  --text-inverse: 0 0% 100%;
 }
 
 * {
@@ -48,6 +44,8 @@ body {
   background-color: hsl(var(--surface));
   color: hsl(var(--text-primary));
   font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+  background: #f8fafc;
 }
 
 ::selection {
