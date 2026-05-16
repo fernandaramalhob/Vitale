@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen gap-4 overflow-hidden bg-[#f4f6f5] p-3 text-slate-900">
+    <div className="flex min-h-screen gap-4 overflow-x-hidden bg-[#f4f6f5] p-3 text-slate-900">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         <Topbar />

@@ -33,6 +33,7 @@ create table if not exists public.vitale_sessions (
 create table if not exists public.vitale_appointments (
   id uuid primary key default gen_random_uuid(),
   patient_name text not null,
+  doctor_name text,
   appointment_date date not null,
   appointment_time time not null,
   duration_minutes integer not null check (duration_minutes > 0),
@@ -50,6 +51,8 @@ create table if not exists public.vitale_patients (
   full_name text not null,
   email text not null,
   phone text not null,
+  doctor_name text,
+  convenio_name text,
   status text not null default 'ativo' check (status in ('ativo', 'inativo')),
   type text not null default 'particular',
   last_visit date,
@@ -81,6 +84,12 @@ create index if not exists vitale_patients_owner_id_idx
 
 create unique index if not exists vitale_patients_owner_email_idx
   on public.vitale_patients (owner_id, lower(email));
+
+create index if not exists vitale_patients_owner_doctor_idx
+  on public.vitale_patients (owner_id, doctor_name);
+
+create index if not exists vitale_patients_owner_convenio_idx
+  on public.vitale_patients (owner_id, convenio_name);
 
 drop trigger if exists vitale_appointments_set_updated_at on public.vitale_appointments;
 create trigger vitale_appointments_set_updated_at

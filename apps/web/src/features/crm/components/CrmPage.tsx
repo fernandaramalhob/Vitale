@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 type StatCard = {
@@ -299,9 +300,12 @@ export function CrmPage() {
             })}
           </div>
 
-          <button className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]">
+          <Link
+            href="/dashboards/recomendacoes"
+            className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]"
+          >
             Ver todos os insights
-          </button>
+          </Link>
         </aside>
       </section>
 
@@ -415,10 +419,13 @@ export function CrmPage() {
             </table>
           </div>
 
-          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#d7e6dc] bg-white px-4 py-3 text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]">
+          <Link
+            href="/pacientes"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#d7e6dc] bg-white px-4 py-3 text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]"
+          >
             Ver todos os pacientes que precisam de atenção
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </div>
 
         <div className="rounded-[18px] border border-[#e6edf1] bg-white p-5 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
@@ -446,9 +453,12 @@ export function CrmPage() {
             })}
           </div>
 
-          <button className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]">
+          <Link
+            href="/dashboards/recomendacoes"
+            className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]"
+          >
             Ver todas as sugestões
-          </button>
+          </Link>
         </div>
 
         <div className="rounded-[18px] border border-[#e6edf1] bg-white p-5 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
@@ -473,9 +483,12 @@ export function CrmPage() {
             ))}
           </div>
 
-          <button className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]">
+          <Link
+            href="/configuracoes#atividades-recentes"
+            className="mt-4 flex h-11 w-full items-center justify-center rounded-2xl border border-[#d7e6dc] bg-white text-[14px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f7fffa]"
+          >
             Ver todas as atividades
-          </button>
+          </Link>
         </div>
       </section>
 

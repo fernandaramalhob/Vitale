@@ -8,6 +8,8 @@ type PatientRow = {
   full_name: string;
   email: string;
   phone: string;
+  doctor_name: string | null;
+  convenio_name: string | null;
   status: string;
   type: string;
   last_visit: string | null;
@@ -31,6 +33,8 @@ function parseBody(body: unknown) {
   const fullName = String(data.fullName ?? "").trim();
   const email = String(data.email ?? "").trim();
   const phone = String(data.phone ?? "").trim();
+  const doctorName = String(data.doctorName ?? "").trim();
+  const convenioName = String(data.convenioName ?? "").trim();
   const status = String(data.status ?? "ativo").trim().toLowerCase();
   const type = String(data.type ?? "particular").trim();
   const lastVisit = String(data.lastVisit ?? "").trim();
@@ -50,6 +54,8 @@ function parseBody(body: unknown) {
     fullName,
     email,
     phone,
+    doctorName: doctorName || null,
+    convenioName: convenioName || null,
     status: status === "inativo" ? "inativo" : "ativo",
     type: type || "particular",
     lastVisit: lastVisit || null,
@@ -79,7 +85,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("vitale_patients")
     .select(
-      "id, owner_id, full_name, email, phone, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
+      "id, owner_id, full_name, email, phone, doctor_name, convenio_name, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
     )
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
@@ -126,6 +132,8 @@ export async function POST(request: Request) {
       full_name: payload.fullName,
       email: payload.email,
       phone: payload.phone,
+      doctor_name: payload.doctorName,
+      convenio_name: payload.convenioName,
       status: payload.status,
       type: payload.type,
       last_visit: payload.lastVisit,
@@ -138,7 +146,7 @@ export async function POST(request: Request) {
       procedure_photos: payload.procedurePhotos,
     })
     .select(
-      "id, owner_id, full_name, email, phone, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
+      "id, owner_id, full_name, email, phone, doctor_name, convenio_name, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
     )
     .single();
 
@@ -205,6 +213,8 @@ export async function PATCH(request: Request) {
       full_name: payload.fullName,
       email: payload.email,
       phone: payload.phone,
+      doctor_name: payload.doctorName,
+      convenio_name: payload.convenioName,
       status: payload.status,
       type: payload.type,
       last_visit: payload.lastVisit,
@@ -219,7 +229,7 @@ export async function PATCH(request: Request) {
     .eq("id", patientId)
     .eq("owner_id", user.id)
     .select(
-      "id, owner_id, full_name, email, phone, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
+      "id, owner_id, full_name, email, phone, doctor_name, convenio_name, status, type, last_visit, appointments_count, total_spent, source, avatar_url, notes, attachments, procedure_photos, created_at, updated_at"
     )
     .single();
 

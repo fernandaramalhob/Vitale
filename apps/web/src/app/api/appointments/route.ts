@@ -5,6 +5,7 @@ import { getDb, hasDatabaseUrl } from "@/lib/db";
 type AppointmentRow = {
   id: string;
   patient_name: string;
+  doctor_name: string | null;
   appointment_date: string;
   appointment_time: string;
   duration_minutes: number;
@@ -27,6 +28,7 @@ function parseBody(body: unknown) {
   const durationMinutes = Number(data.durationMinutes);
   const category = String(data.category ?? "").trim();
   const procedureName = String(data.procedureName ?? "").trim();
+  const doctorName = String(data.doctorName ?? "").trim();
   const notes = String(data.notes ?? "").trim();
 
   if (
@@ -48,6 +50,7 @@ function parseBody(body: unknown) {
     durationMinutes: Math.trunc(durationMinutes),
     category,
     procedureName,
+    doctorName: doctorName || null,
     notes: notes || null,
   };
 }
@@ -62,6 +65,7 @@ export async function GET() {
     select
       id,
       patient_name,
+      doctor_name,
       appointment_date,
       appointment_time,
       duration_minutes,
@@ -109,6 +113,7 @@ export async function POST(request: Request) {
   const [appointment] = await db<AppointmentRow[]>`
     insert into public.vitale_appointments (
       patient_name,
+      doctor_name,
       appointment_date,
       appointment_time,
       duration_minutes,
@@ -118,6 +123,7 @@ export async function POST(request: Request) {
     )
     values (
       ${data.patientName},
+      ${data.doctorName},
       ${data.appointmentDate}::date,
       ${data.appointmentTime}::time,
       ${data.durationMinutes},
@@ -128,6 +134,7 @@ export async function POST(request: Request) {
     returning
       id,
       patient_name,
+      doctor_name,
       appointment_date,
       appointment_time,
       duration_minutes,
@@ -139,4 +146,67 @@ export async function POST(request: Request) {
   `;
 
   return NextResponse.json({ appointment }, { status: 201 });
+}
+
+export async function PUT(request: Request) {
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ message: "Corpo da requisicao invalido." }, { status: 400 });
+  }
+
+  const data = parseBody(body);
+  const appointmentId = String((body as Record<string, unknown> | null)?.appointmentId ?? "").trim();
+
+  if (!data || !appointmentId) {
+    return NextResponse.json(
+      { message: "Preencha o agendamento e os dados obrigatorios." },
+      { status: 400 }
+    );
+  }
+
+  if (!hasDatabaseUrl()) {
+    return NextResponse.json(
+      {
+        message:
+          "DATABASE_URL nao configurada. Me envie a connection string do banco para eu atualizar os agendamentos.",
+      },
+      { status: 503 }
+    );
+  }
+
+  const db = getDb();
+  const [updatedAppointment] = await db<AppointmentRow[]>`
+    update public.vitale_appointments
+    set
+      patient_name = ${data.patientName},
+      doctor_name = ${data.doctorName},
+      appointment_date = ${data.appointmentDate}::date,
+      appointment_time = ${data.appointmentTime}::time,
+      duration_minutes = ${data.durationMinutes},
+      category = ${data.category},
+      procedure_name = ${data.procedureName},
+      notes = ${data.notes}
+    where id = ${appointmentId}
+    returning
+      id,
+      patient_name,
+      doctor_name,
+      appointment_date,
+      appointment_time,
+      duration_minutes,
+      category,
+      procedure_name,
+      notes,
+      status,
+      created_at
+  `;
+
+  if (!updatedAppointment) {
+    return NextResponse.json({ message: "Agendamento nao encontrado." }, { status: 404 });
+  }
+
+  return NextResponse.json({ updatedAppointment }, { status: 200 });
 }

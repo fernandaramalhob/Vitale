@@ -303,12 +303,6 @@ function SectionCard({
 export function DashboardPage() {
   return (
     <div className="space-y-4">
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-5">
-        {metrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </section>
-
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
         <SectionCard
           title="Performance da equipe"
@@ -346,10 +340,13 @@ export function DashboardPage() {
             ))}
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/dashboards/desempenho"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver desempenho completo
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
 
         <SectionCard
@@ -373,10 +370,13 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/agenda"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver agenda completa
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
 
         <SectionCard
@@ -402,10 +402,13 @@ export function DashboardPage() {
             })}
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/dashboards/canais"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver todos os canais
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
       </section>
 
@@ -417,27 +420,31 @@ export function DashboardPage() {
         >
           <div className="space-y-4">
             {steps.map((step) => (
-              <div key={step.label} className="grid grid-cols-[minmax(0,1fr)_54px_54px] items-center gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 flex-1 rounded-xl bg-[#e5edf8]">
-                    <div className="h-9 rounded-xl bg-[#dbe5f4]" style={{ width: `${step.percent}%` }} />
+              <div key={step.label} className="space-y-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_54px_54px] items-center gap-3">
+                  <div className="h-9 rounded-full bg-[#edf8f1] p-1">
+                    <div
+                      className="h-7 rounded-full bg-[#aee3be]"
+                      style={{ width: `${step.percent}%` }}
+                    />
                   </div>
+                  <span className="text-right text-[13px] font-medium text-slate-700">{step.count}</span>
+                  <span className="text-right text-[13px] font-medium text-slate-500">
+                    {step.percent === 100 ? "" : `${step.percent}%`}
+                  </span>
                 </div>
-                <span className="text-right text-[13px] font-medium text-slate-700">{step.count}</span>
-                <span className="text-right text-[13px] font-medium text-slate-500">
-                  {step.percent === 100 ? "" : `${step.percent}%`}
-                </span>
-                <div className="col-span-3 -mt-8 flex items-center justify-between px-3 text-[13px] text-slate-700">
-                  <span>{step.label}</span>
-                </div>
+                <div className="px-1 text-[13px] text-slate-600">{step.label}</div>
               </div>
             ))}
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/dashboards/funil"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver funil completo
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
 
         <SectionCard title="Indicadores de qualidade" subtitle="" action={<div />}>
@@ -457,10 +464,13 @@ export function DashboardPage() {
             })}
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/dashboards/qualidade"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver relatorio completo
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
 
         <SectionCard title="Alertas e oportunidades" subtitle="" action={<div />}>
@@ -485,11 +495,20 @@ export function DashboardPage() {
             })}
           </div>
 
-          <button className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm">
+          <Link
+            href="/dashboards/recomendacoes"
+            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-[14px] font-semibold text-[#159a4a] shadow-sm"
+          >
             Ver todas as recomendacoes
             <ArrowRight size={16} />
-          </button>
+          </Link>
         </SectionCard>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-5">
+        {metrics.map((metric) => (
+          <MetricCard key={metric.label} metric={metric} />
+        ))}
       </section>
     </div>
   );

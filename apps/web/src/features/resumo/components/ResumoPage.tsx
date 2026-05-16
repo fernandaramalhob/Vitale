@@ -1,12 +1,35 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { X } from "lucide-react";
+
+type CardItem = {
+  hora: string;
+  nome: string;
+  proc: string;
+};
+
+type KanbanColumn = {
+  id: string;
+  label: string;
+  count: number;
+  gradient: string;
+  pacientes: CardItem[];
+};
+
+type CardFormState = {
+  hora: string;
+  nome: string;
+  proc: string;
+};
+
 const kpis = [
   { label: "OCUPACAO DA AGENDA", value: "91%" },
   { label: "COMPARECIMENTO PREVISTO", value: "84%" },
   { label: "ESPERA MEDIA ALVO", value: "11 min" },
 ];
 
-const colunas = [
+const seedColunas: KanbanColumn[] = [
   {
     id: "confirmados",
     label: "Confirmados",
@@ -49,7 +72,89 @@ const colunas = [
   },
 ];
 
+const initialCardForm: CardFormState = {
+  hora: "08:00",
+  nome: "",
+  proc: "",
+};
+
 export function ResumoPage() {
+  const formRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(seedColunas);
+  const [cardForm, setCardForm] = useState<CardFormState>(initialCardForm);
+  const [addOpen, setAddOpen] = useState(false);
+  const [activeColumnId, setActiveColumnId] = useState<string>(seedColunas[0]?.id ?? "");
+
+  const activeColumn = useMemo(
+    () => columns.find((column) => column.id === activeColumnId) ?? columns[0],
+    [activeColumnId, columns]
+  );
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setAddOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setAddOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function openAddCard(columnId: string) {
+    const targetColumn = columns.find((column) => column.id === columnId) ?? columns[0];
+    setActiveColumnId(targetColumn?.id ?? "");
+    setCardForm(initialCardForm);
+    setAddOpen(true);
+  }
+
+  function closeAddCard() {
+    setAddOpen(false);
+    setCardForm(initialCardForm);
+  }
+
+  function updateCardForm<K extends keyof CardFormState>(key: K, value: CardFormState[K]) {
+    setCardForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleAddCard(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nome = cardForm.nome.trim();
+    const proc = cardForm.proc.trim();
+
+    if (!nome || !proc || !activeColumn) {
+      return;
+    }
+
+    const newCard: CardItem = {
+      hora: cardForm.hora,
+      nome,
+      proc,
+    };
+
+    setColumns((current) =>
+      current.map((column) =>
+        column.id === activeColumn.id
+          ? { ...column, count: column.count + 1, pacientes: [...column.pacientes, newCard] }
+          : column
+      )
+    );
+
+    closeAddCard();
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-[22px] border border-[#d9e4de] bg-[linear-gradient(90deg,#ecf9ef_0%,#eefcff_100%)] px-8 py-8 shadow-[0_1px_3px_rgba(18,37,24,0.05)]">
@@ -94,7 +199,7 @@ export function ResumoPage() {
         </div>
 
         <div className="grid gap-4 xl:grid-cols-4">
-          {colunas.map((col) => (
+          {columns.map((col) => (
             <div key={col.id} className="space-y-4">
               <div
                 className="flex items-center justify-between rounded-[28px] px-4 py-3 shadow-[0_0_0_6px_rgba(27,158,84,0.08)]"
@@ -108,7 +213,12 @@ export function ResumoPage() {
                     {col.label}
                   </span>
                 </div>
-                <button className="text-[26px] font-light leading-none text-white/85 transition-colors hover:text-white">
+                <button
+                  type="button"
+                  onClick={() => openAddCard(col.id)}
+                  className="text-[26px] font-light leading-none text-white/85 transition-colors hover:text-white"
+                  aria-label={`Adicionar paciente em ${col.label}`}
+                >
                   +
                 </button>
               </div>
@@ -136,6 +246,89 @@ export function ResumoPage() {
           ))}
         </div>
       </section>
+
+      {addOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-sm">
+          <div
+            ref={formRef}
+            className="w-full max-w-xl rounded-[28px] border border-white/70 bg-white p-6 shadow-[0_30px_80px_rgba(15,23,42,0.18)]"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-[26px] font-bold tracking-[-0.03em] text-slate-900">
+                  Adicionar paciente
+                </h3>
+                <p className="mt-2 text-[14px] leading-6 text-slate-500">
+                  Inclua mais uma pessoa na coluna {activeColumn?.label ?? "selecionada"}.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAddCard}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-50"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form className="mt-6 space-y-5" onSubmit={handleAddCard}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Hora</span>
+                  <input
+                    type="time"
+                    value={cardForm.hora}
+                    onChange={(event) => updateCardForm("hora", event.target.value)}
+                    className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition-colors focus:border-[#19a14f]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Nome</span>
+                  <input
+                    type="text"
+                    value={cardForm.nome}
+                    onChange={(event) => updateCardForm("nome", event.target.value)}
+                    placeholder="Ex.: Ana Silva"
+                    className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-[#19a14f]"
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">
+                    Procedimento
+                  </span>
+                  <input
+                    type="text"
+                    value={cardForm.proc}
+                    onChange={(event) => updateCardForm("proc", event.target.value)}
+                    placeholder="Ex.: Bioestimulador"
+                    className="h-12 w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-[#19a14f]"
+                  />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeAddCard}
+                  className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[14px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-2xl bg-gradient-to-r from-[#16a34a] to-[#0f9c68] px-5 py-3 text-[14px] font-semibold text-white shadow-[0_12px_26px_rgba(16,185,129,0.2)] transition-opacity hover:opacity-95"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

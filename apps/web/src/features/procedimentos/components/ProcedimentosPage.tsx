@@ -7,20 +7,26 @@ import {
   CalendarDays,
   CircleDollarSign,
   FlaskConical,
+  ChevronDown,
+  Search,
+  Tag,
   LineChart,
   Medal,
+  Boxes,
+  Package2,
   MoreVertical,
-  Sparkles,
   Star,
   Stethoscope,
   TrendingUp,
   Users,
   Wallet,
-  Boxes,
   Smile,
   HeartPulse,
   ShieldPlus,
+  X,
 } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type MetricCard = {
   label: string;
@@ -32,12 +38,23 @@ type MetricCard = {
 };
 
 type ProcedureCard = {
+  id: string;
   name: string;
   category: string;
   price: string;
   executions: string;
   rating: string;
   accent: string;
+};
+
+type ProcedureSeed = Omit<ProcedureCard, "id">;
+
+type ProcedureFormState = {
+  name: string;
+  category: string;
+  price: string;
+  executions: string;
+  rating: string;
 };
 
 type TopProcedure = {
@@ -98,7 +115,7 @@ const metrics: MetricCard[] = [
 
 const categories = ["Todos", "Estéticos", "Odontológicos", "Terapêuticos", "Outros"];
 
-const procedures: ProcedureCard[] = [
+const procedures: ProcedureSeed[] = [
   {
     name: "Harmonização Facial",
     category: "Estético",
@@ -192,6 +209,21 @@ const revenueCategories: RevenueCategory[] = [
 ];
 
 const revenuePoints = [110, 150, 145, 175, 150, 180];
+
+const initialProcedures = procedures.map((procedure) => ({
+  ...procedure,
+  id: procedure.name,
+}));
+
+const initialForm: ProcedureFormState = {
+  name: "",
+  category: "EstÃ©tico",
+  price: "",
+  executions: "",
+  rating: "4,8",
+};
+
+const proceduresStorageKey = "vitale-procedures";
 
 function sparkPath(points: number[], width = 240, height = 68) {
   const min = Math.min(...points);
@@ -328,6 +360,115 @@ function RevenueChart() {
   );
 }
 
+function FancySelect({
+  label,
+  value,
+  options,
+  onSelect,
+  showLabel = true,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onSelect: (value: string) => void;
+  showLabel?: boolean;
+  icon?: LucideIcon;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="group flex h-[76px] w-full items-center rounded-[20px] border border-[#dce5ee] bg-white px-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:border-[#cbd8e5] focus:outline-none focus:ring-4 focus:ring-[#19a14f]/8"
+      >
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {Icon ? (
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                <Icon size={18} />
+              </span>
+            ) : null}
+            <div className="min-w-0">
+            {showLabel ? (
+              <>
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  {label}
+                </span>
+                <span className="block truncate text-[18px] font-medium text-slate-800">{value}</span>
+              </>
+            ) : (
+              <span className="block truncate text-[18px] font-medium text-slate-800">{value}</span>
+            )}
+            </div>
+          </div>
+
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#f6f9fc] text-slate-400 transition-colors group-hover:bg-[#effaf3] group-hover:text-[#0f9c68]">
+            <ChevronDown size={16} />
+          </span>
+        </div>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 top-[calc(100%+10px)] z-30 w-full rounded-[20px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.15)]">
+          <p className="px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Opções
+          </p>
+          <div className="space-y-1">
+            {options.map((option) => {
+              const active = option === value;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onSelect(option);
+                    setOpen(false);
+                  }}
+                  className={`mx-1 mb-1 flex w-[calc(100%-0.5rem)] items-center justify-between rounded-full px-4 py-3 text-left text-[14px] font-medium transition-colors last:mb-0 ${
+                    active
+                      ? "border border-[#bfe8c7] bg-[#f0fbf2] text-[#0f9c68] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <span>{option}</span>
+                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-[#0f9c68]" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ProcedureCardView({ procedure }: { procedure: ProcedureCard }) {
   return (
     <article className="overflow-hidden rounded-[18px] border border-[#e5eaf0] bg-white shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
@@ -354,7 +495,160 @@ function ProcedureCardView({ procedure }: { procedure: ProcedureCard }) {
   );
 }
 
+function accentForCategory(category: string) {
+  if (category === "Odontológico") {
+    return "from-[#f8d7d3] via-[#feece8] to-[#d8b5a8]";
+  }
+
+  if (category === "Terapêutico") {
+    return "from-[#e7f7fb] via-[#f4fbfd] to-[#b9e5ef]";
+  }
+
+  if (category === "Outros") {
+    return "from-[#f4ecff] via-[#faf6ff] to-[#d9c7fb]";
+  }
+
+  return "from-[#f3d8c3] via-[#f9e9d9] to-[#f7c49c]";
+}
+
 export function ProcedimentosPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const formRef = useRef<HTMLDivElement>(null);
+  const categoriesMenuRef = useRef<HTMLDivElement>(null);
+  const [proceduresList, setProceduresList] = useState(initialProcedures);
+  const [activeCategory, setActiveCategory] = useState("Todos");
+  const [categoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<ProcedureFormState>(initialForm);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(proceduresStorageKey);
+
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as ProcedureCard[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setProceduresList(parsed);
+      }
+    } catch {
+      localStorage.removeItem(proceduresStorageKey);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(proceduresStorageKey, JSON.stringify(proceduresList));
+    } catch {
+      // Ignore localStorage failures and keep the page usable.
+    }
+  }, [proceduresList]);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setError("");
+      setForm(initialForm);
+      setCreateOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setCreateOpen(false);
+      }
+
+      if (categoriesMenuRef.current && !categoriesMenuRef.current.contains(event.target as Node)) {
+        setCategoriesMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCreateOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function openCreateModal() {
+    setError("");
+    setForm(initialForm);
+    setCreateOpen(true);
+    router.push("/procedimentos?new=1");
+  }
+
+  function closeCreateModal() {
+    setCreateOpen(false);
+    setError("");
+    setForm(initialForm);
+    router.replace("/procedimentos");
+  }
+
+  function updateForm<K extends keyof ProcedureFormState>(key: K, value: ProcedureFormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function matchesCategory(category: string) {
+    if (activeCategory === "Todos") {
+      return true;
+    }
+
+    const mappedCategory =
+      activeCategory === "Estéticos"
+        ? "Estético"
+        : activeCategory === "Odontológicos"
+          ? "Odontológico"
+          : activeCategory === "Terapêuticos"
+            ? "Terapêutico"
+            : activeCategory;
+
+    return category === mappedCategory;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      if (!form.name.trim()) {
+        throw new Error("Preencha o nome do procedimento.");
+      }
+
+      const newProcedure: ProcedureCard = {
+        id: crypto.randomUUID(),
+        name: form.name.trim(),
+        category: form.category,
+        price: form.price.trim() || "R$ 0,00",
+        executions: `${form.executions.trim() || "0"} realizados este mês`,
+        rating: form.rating.trim() || "4,8 (0)",
+        accent: accentForCategory(form.category),
+      };
+
+      setProceduresList((current) => [newProcedure, ...current]);
+      closeCreateModal();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Erro inesperado.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const filteredProcedures = proceduresList.filter((procedure) => matchesCategory(procedure.category));
+
   return (
     <div className="space-y-4">
       <section className="grid gap-4 xl:grid-cols-4">
@@ -375,15 +669,68 @@ export function ProcedimentosPage() {
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[14px] font-semibold text-slate-700 shadow-sm">
                 Ordenar por: <span className="text-slate-500">Mais realizados</span>
               </div>
+
+              <div className="relative" ref={categoriesMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setCategoriesMenuOpen((current) => !current)}
+                  className="group w-[210px] rounded-[26px] border border-[#dce5ee] bg-gradient-to-b from-white to-[#fbfdff] px-4 py-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:border-[#cbd8e5]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Categorias
+                      </span>
+                      <span className="block truncate text-[14px] font-semibold text-slate-800">
+                        {activeCategory}
+                      </span>
+                    </div>
+
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#f6f9fc] text-slate-400 transition-colors group-hover:bg-[#effaf3] group-hover:text-[#0f9c68]">
+                      <ChevronDown size={16} />
+                    </span>
+                  </div>
+                </button>
+
+                {categoriesMenuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+10px)] z-20 w-72 rounded-[20px] border border-slate-200 bg-white p-2 shadow-[0_20px_50px_rgba(15,23,42,0.16)]">
+                    <p className="px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Categorias
+                    </p>
+                    <div className="rounded-[22px]">
+                      {categories.map((category) => (
+                        <button
+                          key={category}
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory(category);
+                            setCategoriesMenuOpen(false);
+                          }}
+                          className={`mx-1 mb-1 flex w-[calc(100%-0.5rem)] items-center justify-between rounded-full px-4 py-3 text-left text-[14px] font-medium transition-colors last:mb-0 ${
+                            category === activeCategory
+                              ? "border border-[#bfe8c7] bg-[#f0fbf2] text-[#0f9c68] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                              : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                          }`}
+                        >
+                          <span>{category}</span>
+                          {category === activeCategory ? <span className="h-2.5 w-2.5 rounded-full bg-[#0f9c68]" /> : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            {categories.map((category, index) => (
+            {categories.map((category) => (
               <button
                 key={category}
+                type="button"
+                onClick={() => setActiveCategory(category)}
                 className={`rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors ${
-                  index === 0
+                  category === activeCategory
                     ? "border-[#bfe8c7] bg-[#f1fbf4] text-[#159a4a]"
                     : "border-[#dfe6ef] bg-white text-slate-600 hover:bg-slate-50"
                 }`}
@@ -394,8 +741,8 @@ export function ProcedimentosPage() {
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {procedures.map((procedure) => (
-              <ProcedureCardView key={procedure.name} procedure={procedure} />
+            {filteredProcedures.map((procedure) => (
+              <ProcedureCardView key={procedure.id ?? procedure.name} procedure={procedure} />
             ))}
           </div>
 
@@ -504,6 +851,146 @@ export function ProcedimentosPage() {
           </div>
         </section>
       </section>
+
+      {createOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-sm">
+          <div
+            ref={formRef}
+            className="max-h-[92vh] w-full max-w-[1120px] overflow-auto rounded-[30px] border border-white/70 bg-white p-8 shadow-[0_30px_80px_rgba(15,23,42,0.18)]"
+          >
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h3 className="text-[34px] font-bold tracking-[-0.04em] text-slate-900">
+                  Cadastrar novo procedimento
+                </h3>
+                <p className="mt-3 text-[18px] leading-7 text-slate-500">
+                  Preencha os dados do procedimento para salvar e exibir nos cards e relatórios.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                className="rounded-full border border-[#dce5ee] p-3 text-[#159a4a] transition-colors hover:bg-[#f4fbf6]"
+                aria-label="Fechar cadastro"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <form className="mt-10 space-y-8" onSubmit={handleSubmit}>
+              <div className="grid gap-6 md:grid-cols-2">
+                <label className="block md:col-span-2">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">
+                    Nome do procedimento
+                  </span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <Search size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(event) => updateForm("name", event.target.value)}
+                      placeholder="Ex.: Bioestimulador de colágeno"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">
+                    Categoria
+                  </span>
+                  <FancySelect
+                    label="Categoria"
+                    value={form.category}
+                    options={["Estético", "Odontológico", "Terapêutico", "Outros"]}
+                    onSelect={(value) => updateForm("category", value)}
+                    showLabel={false}
+                    icon={Tag}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Preço</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <CircleDollarSign size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.price}
+                      onChange={(event) => updateForm("price", event.target.value)}
+                      placeholder="R$ 1.290,00"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">
+                    Execuções no mês
+                  </span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <FlaskConical size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.executions}
+                      onChange={(event) => updateForm("executions", event.target.value)}
+                      placeholder="42"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">
+                    Avaliação
+                  </span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <Star size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.rating}
+                      onChange={(event) => updateForm("rating", event.target.value)}
+                      placeholder="4,8"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {error ? (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-700">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  className="rounded-[18px] border border-[#bfe2c7] bg-white px-6 py-3.5 text-[16px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f4fbf6]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-[18px] bg-gradient-to-r from-[#16a34a] to-[#0f9c68] px-6 py-3.5 text-[16px] font-semibold text-white shadow-[0_16px_30px_rgba(16,185,129,0.24)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? "Salvando..." : "Salvar procedimento"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

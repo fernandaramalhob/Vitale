@@ -16,7 +16,6 @@ import {
   Filter,
   Landmark,
   LineChart,
-  Plus,
   ReceiptText,
   ShieldAlert,
   Sparkles,
@@ -24,7 +23,10 @@ import {
   TrendingUp,
   Wallet,
   XCircle,
+  X,
 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Metric = {
   label: string;
@@ -37,6 +39,7 @@ type Metric = {
 };
 
 type Movement = {
+  id: string;
   date: string;
   description: string;
   category: string;
@@ -45,6 +48,18 @@ type Movement = {
   status: string;
   payment: string;
   statusTone: "green" | "red" | "amber";
+};
+
+type MovementSeed = Omit<Movement, "id">;
+
+type MovementFormState = {
+  date: string;
+  description: string;
+  category: string;
+  type: "Receita" | "Despesa";
+  amount: string;
+  status: "Recebido" | "Pago" | "Pendente";
+  payment: string;
 };
 
 type PendingRevenue = {
@@ -118,7 +133,7 @@ const metrics: Metric[] = [
 
 const filters = ["Todos", "Receitas", "Despesas", "Recebíveis", "Pagamentos"];
 
-const movements: Movement[] = [
+const movements: MovementSeed[] = [
   {
     date: "28/05/2025",
     description: "Harmonização Facial - Juliana Silva",
@@ -200,6 +215,18 @@ const movements: Movement[] = [
     statusTone: "green",
   },
 ];
+
+const financeStorageKey = "vitale-finance-movements";
+
+const initialMovementForm: MovementFormState = {
+  date: new Date().toISOString().slice(0, 10),
+  description: "",
+  category: "Procedimentos",
+  type: "Receita",
+  amount: "",
+  status: "Recebido",
+  payment: "PIX",
+};
 
 const pendingRevenue: PendingRevenue[] = [
   {
@@ -372,7 +399,281 @@ function MonthChart() {
   );
 }
 
+function toneForStatus(status: MovementFormState["status"]): "green" | "red" | "amber" {
+  if (status === "Pendente") {
+    return "amber";
+  }
+
+  return status === "Pago" ? "green" : "green";
+}
+
+function normalizeAmount(value: string) {
+  const digits = value.replace(/[^\d,.-]/g, "").replace(",", ".");
+  const parsed = Number(digits);
+  if (!Number.isFinite(parsed)) {
+    return "0,00";
+  }
+
+  return parsed.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+type FancySelectProps = {
+  label: string;
+  value: string;
+  options: string[];
+  onSelect: (value: string) => void;
+  showLabel?: boolean;
+  icon?: LucideIcon;
+};
+
+function FancySelect({ label, value, options, onSelect, showLabel = true, icon: Icon }: FancySelectProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={`group flex h-[76px] w-full items-center rounded-[20px] border bg-white px-4 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:border-[#b7d9c2] focus:outline-none focus:ring-4 focus:ring-[#19a14f]/8 ${
+          open ? "border-[#19a14f]" : "border-[#dce5ee]"
+        }`}
+      >
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            {Icon ? (
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${open ? "bg-[#edf8f1] text-[#0f9c68]" : "bg-[#eff7f1] text-[#159a4a]"}`}>
+                <Icon size={18} />
+              </span>
+            ) : null}
+            {showLabel ? (
+              <>
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  {label}
+                </span>
+                <span className="block truncate text-[18px] font-medium text-slate-800">{value}</span>
+              </>
+            ) : (
+              <span className="block truncate text-[18px] font-medium text-slate-800">{value}</span>
+            )}
+          </div>
+
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+              open
+                ? "bg-[#edf8f1] text-[#0f9c68]"
+                : "bg-[#f6f9fc] text-slate-400 group-hover:bg-[#effaf3] group-hover:text-[#0f9c68]"
+            }`}
+          >
+            <ChevronDown size={16} />
+          </span>
+        </div>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-full rounded-[18px] border border-[#dce5ee] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.15)]">
+          <p className="px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            Opções
+          </p>
+          <div className="space-y-1">
+            {options.map((option) => {
+              const active = option === value;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    onSelect(option);
+                    setOpen(false);
+                  }}
+                  className={`mx-1 mb-1 flex w-[calc(100%-0.5rem)] items-center justify-between rounded-[14px] px-4 py-3 text-left text-[14px] font-medium transition-colors last:mb-0 ${
+                    active
+                      ? "border border-[#bfe8c7] bg-[#f0fbf2] text-[#0f9c68] shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+                      : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <span>{option}</span>
+                  {active ? <span className="h-2.5 w-2.5 rounded-full bg-[#0f9c68]" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function FinanceiroPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const formRef = useRef<HTMLDivElement>(null);
+  const [activeFilter, setActiveFilter] = useState("Todos");
+  const [movementsList, setMovementsList] = useState<Movement[]>(() =>
+    movements.map((movement) => ({
+      ...movement,
+      id: `${movement.date}-${movement.description}`,
+    }))
+  );
+  const [createOpen, setCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState<MovementFormState>(initialMovementForm);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(financeStorageKey);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Movement[];
+      if (Array.isArray(parsed)) {
+        setMovementsList(parsed.filter((item) => item && typeof item.id === "string"));
+      }
+    } catch {
+      // Keep seeded movements when storage is unavailable or malformed.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (movementsList.length) {
+      localStorage.setItem(financeStorageKey, JSON.stringify(movementsList));
+    }
+  }, [movementsList]);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setError("");
+      setForm(initialMovementForm);
+      setCreateOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setCreateOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setCreateOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function openCreateModal() {
+    setError("");
+    setForm(initialMovementForm);
+    setCreateOpen(true);
+    router.push("/financeiro?new=1");
+  }
+
+  function closeCreateModal() {
+    setCreateOpen(false);
+    setError("");
+    setForm(initialMovementForm);
+    router.replace("/financeiro");
+  }
+
+  function updateForm<K extends keyof MovementFormState>(key: K, value: MovementFormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  const filteredMovements = useMemo(() => {
+    return movementsList.filter((movement) => {
+      if (activeFilter === "Todos") {
+        return true;
+      }
+
+      if (activeFilter === "Receitas") {
+        return movement.type === "Receita";
+      }
+
+      if (activeFilter === "Despesas") {
+        return movement.type === "Despesa";
+      }
+
+      if (activeFilter === "Recebíveis") {
+        return movement.status === "Pendente";
+      }
+
+      if (activeFilter === "Pagamentos") {
+        return movement.status === "Pago";
+      }
+
+      return true;
+    });
+  }, [activeFilter, movementsList]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+
+    try {
+      if (!form.description.trim()) {
+        throw new Error("Preencha a descrição da movimentação.");
+      }
+
+      const amount = normalizeAmount(form.amount);
+      const isExpense = form.type === "Despesa";
+      const signedValue = isExpense ? `- R$ ${amount}` : `R$ ${amount}`;
+
+      const newMovement: Movement = {
+        id: crypto.randomUUID(),
+        date: form.date.split("-").reverse().join("/"),
+        description: form.description.trim(),
+        category: form.category,
+        type: form.type,
+        value: signedValue,
+        status: form.status,
+        payment: form.payment,
+        statusTone: toneForStatus(form.status),
+      };
+
+      setMovementsList((current) => [newMovement, ...current]);
+      closeCreateModal();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Erro inesperado.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
@@ -395,8 +696,12 @@ export function FinanceiroPage() {
                 {filters.map((filter, index) => (
                   <button
                     key={filter}
+                    type="button"
+                    onClick={() => setActiveFilter(filter)}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                      index === 0 ? "bg-[#f1fbf4] text-[#159a4a]" : "text-slate-500 hover:text-slate-700"
+                      activeFilter === filter || (index === 0 && activeFilter === "Todos")
+                        ? "bg-[#f1fbf4] text-[#159a4a]"
+                        : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     {filter}
@@ -408,7 +713,6 @@ export function FinanceiroPage() {
                 <Download size={14} className="mr-2 inline-block" />
                 Exportar
               </button>
-              <button className="text-[13px] font-semibold text-[#159a4a]">Ver todos</button>
             </div>
           </div>
 
@@ -426,8 +730,8 @@ export function FinanceiroPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf1f4] bg-white">
-                {movements.map((movement) => (
-                  <tr key={`${movement.date}-${movement.description}`} className="text-[13px] text-slate-700">
+                {filteredMovements.map((movement) => (
+                  <tr key={movement.id} className="text-[13px] text-slate-700">
                     <td className="px-4 py-4 whitespace-nowrap">{movement.date}</td>
                     <td className="px-4 py-4 font-medium text-slate-900">{movement.description}</td>
                     <td className="px-4 py-4">{movement.category}</td>
@@ -547,6 +851,13 @@ export function FinanceiroPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredMovements.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-8 text-center text-[14px] text-slate-500" colSpan={7}>
+                      Nenhuma movimentação encontrada para este filtro.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -608,6 +919,165 @@ export function FinanceiroPage() {
           </div>
         </div>
       </section>
+
+      {createOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4 py-6 backdrop-blur-sm">
+          <div
+            ref={formRef}
+            className="max-h-[92vh] w-full max-w-[1120px] overflow-auto rounded-[30px] border border-white/70 bg-white p-8 shadow-[0_30px_80px_rgba(15,23,42,0.18)]"
+          >
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h3 className="text-[34px] font-bold tracking-[-0.04em] text-slate-900">
+                  Adicionar financeiro
+                </h3>
+                <p className="mt-3 text-[18px] leading-7 text-slate-500">
+                  Preencha os dados da movimentação para salvar automaticamente.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                className="rounded-full border border-[#dce5ee] p-3 text-[#159a4a] transition-colors hover:bg-[#f4fbf6]"
+                aria-label="Fechar cadastro"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <form className="mt-10 space-y-8" onSubmit={handleSubmit}>
+              <div className="grid gap-6 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Data</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <CalendarDays size={18} />
+                    </span>
+                    <input
+                      type="date"
+                      value={form.date}
+                      onChange={(event) => updateForm("date", event.target.value)}
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Tipo</span>
+                  <FancySelect
+                    label="Tipo"
+                    value={form.type}
+                    options={["Receita", "Despesa"]}
+                    onSelect={(value) => updateForm("type", value as MovementFormState["type"])}
+                    showLabel={false}
+                    icon={CircleDollarSign}
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Descrição</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <ReceiptText size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.description}
+                      onChange={(event) => updateForm("description", event.target.value)}
+                      placeholder="Ex: Harmonização facial - Juliana Silva"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Categoria</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <Filter size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.category}
+                      onChange={(event) => updateForm("category", event.target.value)}
+                      placeholder="Procedimentos"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Valor</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <DollarSign size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.amount}
+                      onChange={(event) => updateForm("amount", event.target.value)}
+                      placeholder="Ex: 2800"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Status</span>
+                  <FancySelect
+                    label="Status"
+                    value={form.status}
+                    options={["Recebido", "Pago", "Pendente"]}
+                    onSelect={(value) => updateForm("status", value as MovementFormState["status"])}
+                    showLabel={false}
+                    icon={CheckCircle2}
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-3 block text-[18px] font-semibold text-slate-900">Pagamento</span>
+                  <div className="flex h-[76px] items-center gap-3 rounded-[20px] border border-[#dce5ee] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus-within:border-[#19a14f] focus-within:ring-4 focus-within:ring-[#19a14f]/8">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eff7f1] text-[#159a4a]">
+                      <CreditCard size={18} />
+                    </span>
+                    <input
+                      type="text"
+                      value={form.payment}
+                      onChange={(event) => updateForm("payment", event.target.value)}
+                      placeholder="PIX"
+                      className="w-full bg-transparent text-[18px] text-slate-700 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {error ? (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-700">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeCreateModal}
+                  className="rounded-[18px] border border-[#bfe2c7] bg-white px-6 py-3.5 text-[16px] font-semibold text-[#159a4a] transition-colors hover:bg-[#f4fbf6]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-[18px] bg-gradient-to-r from-[#16a34a] to-[#0f9c68] px-6 py-3.5 text-[16px] font-semibold text-white shadow-[0_16px_30px_rgba(16,185,129,0.24)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {saving ? "Salvando..." : "Salvar movimentação"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

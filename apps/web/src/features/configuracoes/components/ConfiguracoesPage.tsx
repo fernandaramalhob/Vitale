@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -206,6 +207,21 @@ const integrations: Integration[] = [
   },
 ];
 
+const configPrefsKey = "vitale-config-topbar-prefs";
+const configRangeOptions = [
+  "Hoje",
+  "Últimos 7 dias",
+  "Últimos 30 dias",
+  "Este mês",
+  "Próximo mês",
+];
+const configFilterOptions = ["Todas", "Marca", "Acesso", "Integrações", "Segurança", "Operação"];
+
+type ConfigPrefs = {
+  range?: string;
+  filter?: string;
+};
+
 function sparkPath(points: number[], width = 220, height = 58) {
   const min = Math.min(...points);
   const max = Math.max(...points);
@@ -267,18 +283,20 @@ function StatusPill({ tone, children }: { tone: "green" | "amber" | "red"; child
 }
 
 function SectionCard({
+  id,
   title,
   subtitle,
   action,
   children,
 }: {
+  id?: string;
   title: string;
   subtitle?: string;
   action?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] border border-[#e5ebf0] bg-white p-5 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
+    <section id={id} className="rounded-[22px] border border-[#e5ebf0] bg-white p-5 shadow-[0_1px_4px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-[18px] font-bold tracking-[-0.03em] text-slate-900">{title}</h2>
@@ -337,6 +355,94 @@ function DonutChart() {
 }
 
 export function ConfiguracoesPage() {
+  const [configRange, setConfigRange] = useState(configRangeOptions[3]);
+  const [configFilter, setConfigFilter] = useState(configFilterOptions[0]);
+
+  useEffect(() => {
+    function syncConfigPreferences() {
+      try {
+        const raw = localStorage.getItem(configPrefsKey);
+        if (!raw) {
+          return;
+        }
+
+        const parsed = JSON.parse(raw) as ConfigPrefs;
+        if (typeof parsed.range === "string" && configRangeOptions.includes(parsed.range)) {
+          setConfigRange(parsed.range);
+        }
+        if (typeof parsed.filter === "string" && configFilterOptions.includes(parsed.filter)) {
+          setConfigFilter(parsed.filter);
+        }
+      } catch {
+        // Ignore malformed storage data.
+      }
+    }
+
+    syncConfigPreferences();
+
+    function handleConfigSaved() {
+      syncConfigPreferences();
+    }
+
+    window.addEventListener("vitale:config-saved", handleConfigSaved as EventListener);
+    return () => window.removeEventListener("vitale:config-saved", handleConfigSaved as EventListener);
+  }, []);
+
+  const visibleRecentConfigs = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    const parseDate = (value: string) => {
+      const [day, month, year] = value.split("/").map(Number);
+      if (!day || !month || !year) {
+        return null;
+      }
+
+      return new Date(year, month - 1, day);
+    };
+
+    const matchesRange = (value: string) => {
+      const date = parseDate(value);
+      if (!date) {
+        return false;
+      }
+
+      if (configRange === "Hoje") {
+        return date.toDateString() === today.toDateString();
+      }
+
+      if (configRange === "Últimos 7 dias") {
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        return date >= sevenDaysAgo && date <= today;
+      }
+
+      if (configRange === "Últimos 30 dias") {
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        return date >= thirtyDaysAgo && date <= today;
+      }
+
+      if (configRange === "Este mês") {
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      }
+
+      if (configRange === "Próximo mês") {
+        const nextMonth = (currentMonth + 1) % 12;
+        const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+        return date.getMonth() === nextMonth && date.getFullYear() === nextYear;
+      }
+
+      return true;
+    };
+
+    return recentConfigs.filter((item) => {
+      const categoryMatch = configFilter === "Todas" || item.category === configFilter;
+      return categoryMatch && matchesRange(item.date);
+    });
+  }, [configFilter, configRange]);
+
   return (
     <div className="space-y-4">
       <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
@@ -360,16 +466,20 @@ export function ConfiguracoesPage() {
           }
         >
           <div className="flex flex-wrap items-center gap-2 rounded-full border border-[#dfe6ef] bg-white px-2 py-2">
-            {["Todas", "Marca", "Acesso", "Integrações", "Segurança"].map((item, index) => (
-              <button
-                key={item}
-                className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                  index === 0 ? "bg-[#f1fbf4] text-[#159a4a]" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            {configFilterOptions.map((item) => {
+              const active = item === configFilter;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                    active ? "bg-[#f1fbf4] text-[#159a4a]" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {item}
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-5 overflow-hidden rounded-[16px] border border-[#edf1f4]">
@@ -385,18 +495,26 @@ export function ConfiguracoesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#edf1f4] bg-white">
-                {recentConfigs.map((item) => (
-                  <tr key={`${item.date}-${item.description}`} className="text-[13px] text-slate-700">
-                    <td className="px-4 py-4 whitespace-nowrap">{item.date}</td>
-                    <td className="px-4 py-4 font-medium text-slate-900">{item.description}</td>
-                    <td className="px-4 py-4">{item.category}</td>
-                    <td className="px-4 py-4">{item.type}</td>
-                    <td className="px-4 py-4">
-                      <StatusPill tone={item.statusTone}>{item.status}</StatusPill>
+                {visibleRecentConfigs.length > 0 ? (
+                  visibleRecentConfigs.map((item) => (
+                    <tr key={`${item.date}-${item.description}`} className="text-[13px] text-slate-700">
+                      <td className="px-4 py-4 whitespace-nowrap">{item.date}</td>
+                      <td className="px-4 py-4 font-medium text-slate-900">{item.description}</td>
+                      <td className="px-4 py-4">{item.category}</td>
+                      <td className="px-4 py-4">{item.type}</td>
+                      <td className="px-4 py-4">
+                        <StatusPill tone={item.statusTone}>{item.status}</StatusPill>
+                      </td>
+                      <td className="px-4 py-4">{item.owner}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="px-4 py-10 text-center text-[13px] text-slate-500" colSpan={6}>
+                      Nenhuma configuração encontrada para o período e filtro selecionados.
                     </td>
-                    <td className="px-4 py-4">{item.owner}</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -528,6 +646,7 @@ export function ConfiguracoesPage() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
         <SectionCard
+          id="atividades-recentes"
           title="Atividades recentes"
           subtitle="Acompanhe alterações e acessos"
           action={<div />}
